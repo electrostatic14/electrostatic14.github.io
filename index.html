@@ -308,15 +308,27 @@
     }
 
     function endGame() {
-        gameActive = false;
-        if (isSirenOn) toggleSiren();
-        overlay.style.display = 'flex';
-        menuContent.innerHTML = `
-            <div class="main-title">Смена<br>Окончена</div>
-            <div class="sub-title">Результат: ${Math.floor(score/5)} м</div>
-            <button class="action-btn" onclick="location.reload()">В меню</button>
-        `;
+    gameActive = false;
+    if (isSirenOn) toggleSiren();
+    overlay.style.display = 'flex';
+    
+    const finalScore = Math.floor(score / 5);
+
+    menuContent.innerHTML = `
+        <div class="main-title" style="font-size: 24px;">Смена Окончена</div>
+        <div class="sub-title" style="margin-bottom: 15px;">Дистанция: ${finalScore} м</div>
+        
+        <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 15px; border: 1px solid #333; margin-bottom: 20px;">
+            <div style="font-size: 10px; color: #aaa; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 1px;">Данные сотрудника</div>
+            <input type="text" id="playerNick" placeholder="Ваш Nick_Name" 
+                   style="width: 100%; background: #1a1a1a; border: 1px solid #ff3131; color: white; padding: 12px; border-radius: 8px; outline: none; text-align: center; font-family: monospace;">
+        </div>
+
+        <button id="sendBtn" class="action-btn" onclick="sendData('${finalScore}')" style="width: 100%; margin-bottom: 10px;">Отправить отчет</button>
+        <button class="action-btn" style="background: #222; width: 100%; box-shadow: none;" onclick="location.reload()">В главное меню</button>
+    `;
     }
+
 </script>
 </body>
 </html>
