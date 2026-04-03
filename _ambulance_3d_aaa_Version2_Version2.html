@@ -1,0 +1,1101 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Traffic Racer 3D</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+
+        body {
+            background: #1a1a2e;
+            color: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        #game-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        #canvas3d {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* HUD */
+        .hud {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .ui-top {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            display: flex;
+            justify-content: space-between;
+            gap: 15px;
+        }
+
+        .hud-box {
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            padding: 12px 18px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 18px;
+        }
+
+        #distance {
+            color: #00ff88;
+        }
+
+        #coins {
+            color: #ffcc00;
+        }
+
+        #level {
+            color: #00d4ff;
+        }
+
+        .games-left {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 150, 50, 0.4);
+            padding: 12px 20px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 14px;
+            color: #ffaa00;
+        }
+
+        .speed-display {
+            position: absolute;
+            bottom: 160px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(0, 212, 255, 0.4);
+            padding: 15px 20px;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .speed-value {
+            font-size: 32px;
+            font-weight: 900;
+            color: #00d4ff;
+            letter-spacing: 1px;
+        }
+
+        .speed-label {
+            font-size: 10px;
+            color: #7a9fb8;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Controls - БОЛЬШИЕ КНОПКИ */
+        .controls {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            pointer-events: all;
+            padding: 15px 20px;
+            background: rgba(0, 0, 0, 0.3);
+            height: 140px;
+        }
+
+        .nav-btn {
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(135deg, rgba(0, 150, 255, 0.3), rgba(0, 100, 200, 0.3));
+            border: 3px solid rgba(0, 150, 255, 0.6);
+            border-radius: 20px;
+            color: #0096ff;
+            font-size: 48px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.15s;
+            box-shadow: 0 6px 20px rgba(0, 150, 255, 0.4);
+            cursor: pointer;
+        }
+
+        .nav-btn:active {
+            background: linear-gradient(135deg, rgba(0, 150, 255, 0.6), rgba(0, 100, 200, 0.6));
+            border-color: #00d4ff;
+            transform: scale(0.92);
+            box-shadow: 0 0 30px rgba(0, 150, 255, 0.8);
+        }
+
+        /* Menu Overlay */
+        #overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #0f0f1e 0%, #1a1a2e 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            pointer-events: all;
+            padding: 20px;
+        }
+
+        #overlay.hidden {
+            display: none;
+        }
+
+        .menu-container {
+            text-align: center;
+            max-width: 500px;
+            width: 100%;
+        }
+
+        .game-title {
+            font-size: 56px;
+            font-weight: 900;
+            color: #00ff88;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 10px;
+            text-shadow: 0 0 30px rgba(0, 255, 136, 0.5);
+        }
+
+        .game-subtitle {
+            color: #7a9fb8;
+            font-size: 14px;
+            margin-bottom: 50px;
+            letter-spacing: 1px;
+        }
+
+        .difficulty-buttons {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .difficulty-btn {
+            padding: 15px 30px;
+            background: rgba(0, 150, 255, 0.2);
+            border: 2px solid rgba(0, 150, 255, 0.4);
+            color: #0096ff;
+            font-weight: 700;
+            font-size: 14px;
+            border-radius: 10px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.3s;
+            letter-spacing: 1px;
+        }
+
+        .difficulty-btn:active {
+            background: rgba(0, 150, 255, 0.5);
+            border-color: #0096ff;
+            transform: scale(0.95);
+        }
+
+        .difficulty-btn.selected {
+            background: linear-gradient(135deg, #00d4ff, #0088ff);
+            border-color: #00d4ff;
+            color: #000;
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.6);
+        }
+
+        .action-btn {
+            padding: 18px 60px;
+            background: linear-gradient(135deg, #00ff88, #00cc66);
+            border: none;
+            color: #000;
+            font-weight: 900;
+            font-size: 16px;
+            border-radius: 10px;
+            text-transform: uppercase;
+            cursor: pointer;
+            box-shadow: 0 8px 32px rgba(0, 255, 136, 0.4);
+            transition: all 0.3s;
+            letter-spacing: 1px;
+        }
+
+        .action-btn:active {
+            transform: scale(0.95);
+            box-shadow: 0 4px 16px rgba(0, 255, 136, 0.6);
+        }
+
+        .action-btn:disabled {
+            background: #555;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        /* Game Over */
+        .game-over {
+            text-align: center;
+            padding: 30px;
+        }
+
+        .game-over-title {
+            font-size: 48px;
+            font-weight: 900;
+            color: #ff4444;
+            margin-bottom: 30px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .stats-box {
+            background: rgba(0, 0, 0, 0.4);
+            border: 2px solid rgba(0, 212, 255, 0.3);
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 20px 0;
+            font-size: 18px;
+            gap: 20px;
+        }
+
+        .stat-label {
+            color: #7a9fb8;
+            font-weight: 600;
+        }
+
+        .stat-value {
+            color: #00ff88;
+            font-weight: 700;
+        }
+
+        /* Form */
+        .input-group {
+            background: rgba(0, 0, 0, 0.3);
+            border: 2px solid rgba(0, 150, 255, 0.3);
+            padding: 20px;
+            border-radius: 12px;
+            margin: 25px 0;
+        }
+
+        .input-label {
+            font-size: 11px;
+            color: #7a9fb8;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            letter-spacing: 1px;
+            display: block;
+        }
+
+        .input-field {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            border: 2px solid rgba(0, 150, 255, 0.3);
+            color: white;
+            padding: 12px 15px;
+            border-radius: 8px;
+            outline: none;
+            text-align: center;
+            font-family: monospace;
+            font-weight: 600;
+            transition: all 0.3s;
+            font-size: 16px;
+        }
+
+        .input-field:focus {
+            border-color: #00d4ff;
+            box-shadow: 0 0 15px rgba(0, 212, 255, 0.3);
+        }
+
+        .status-msg {
+            margin-top: 15px;
+            font-size: 13px;
+            color: #7a9fb8;
+            min-height: 20px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .action-btn-small {
+            padding: 12px 30px;
+            background: linear-gradient(135deg, #00d4ff, #0088ff);
+            border: none;
+            color: #fff;
+            font-weight: 700;
+            font-size: 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 4px 16px rgba(0, 212, 255, 0.3);
+            transition: all 0.3s;
+        }
+
+        .action-btn-small:active {
+            transform: scale(0.95);
+        }
+
+        @media (max-width: 480px) {
+            .game-title { font-size: 40px; }
+            .nav-btn { width: 90px; height: 90px; font-size: 42px; }
+            .hud-box { font-size: 14px; padding: 10px 14px; }
+            .controls { height: 130px; }
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="canvas3d"></canvas>
+    </div>
+
+    <div class="hud">
+        <div class="games-left" id="gamesLeft">🎮 Игр осталось: 2</div>
+        
+        <div class="ui-top">
+            <div class="hud-box">🎯 <span id="distance">0</span> М</div>
+            <div class="hud-box">⭐ <span id="level">1</span></div>
+            <div class="hud-box">💰 <span id="coins">0</span></div>
+        </div>
+
+        <div class="speed-display">
+            <div class="speed-value" id="speed">0</div>
+            <div class="speed-label">км/ч</div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button class="nav-btn" id="leftBtn">◀</button>
+        <button class="nav-btn" id="rightBtn">▶</button>
+    </div>
+
+    <div id="overlay">
+        <div class="menu-container">
+            <div class="game-title">TRAFFIC<br>RACER</div>
+            <div class="game-subtitle">Avoid Traffic & Earn Points</div>
+            
+            <div style="margin-bottom: 40px;">
+                <div style="color: #7a9fb8; font-size: 12px; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px;">Select Difficulty</div>
+                <div class="difficulty-buttons">
+                    <button class="difficulty-btn selected" data-difficulty="easy">Easy</button>
+                    <button class="difficulty-btn" data-difficulty="normal">Normal</button>
+                    <button class="difficulty-btn" data-difficulty="hard">Hard</button>
+                </div>
+            </div>
+
+            <button class="action-btn" id="startBtn">Start Game</button>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+// GOOGLE SHEETS URL - вставьте вашу ссылку
+const GOOGLE_SHEET_URL = 'https://script.google.com/macros/s/AKfycbws-OTlVZ2nwkWBEFO2Dvu-the0URQE9ErQ9o-TOgOBCubeolqhui4ltAq5hr1AmT-X/exec';
+
+// Game State
+const G = {
+    scene: null,
+    camera: null,
+    renderer: null,
+    playerCar: null,
+    road: [],
+    buildings: [],
+    traffic: [],
+    particles: [],
+    lanes: [-3.5, 0, 3.5],
+    currentLane: 1,
+    targetX: 0,
+    speed: 0,
+    maxSpeed: 200,
+    score: 0,
+    coins: 0,
+    level: 1,
+    gameActive: false,
+    moveLeft: false,
+    moveRight: false,
+    time: 0,
+    difficulty: 'normal',
+    gamesPlayedToday: 0,
+    difficultySettings: {
+        easy: { trafficFreq: 0.015, trafficSpeed: 0.6, maxSpeed: 180 },
+        normal: { trafficFreq: 0.025, trafficSpeed: 0.9, maxSpeed: 200 },
+        hard: { trafficFreq: 0.035, trafficSpeed: 1.2, maxSpeed: 220 }
+    }
+};
+
+// Загрузка статистики игр
+function loadGameStats() {
+    const stats = JSON.parse(localStorage.getItem('tr_game_stats') || '{"played": 0, "date": null, "games": []}');
+    const today = new Date().toDateString();
+    
+    if (stats.date !== today) {
+        stats.played = 0;
+        stats.date = today;
+        stats.games = [];
+    }
+    
+    G.gamesPlayedToday = stats.played;
+    updateGamesCounter();
+    return stats;
+}
+
+function updateGamesCounter() {
+    const left = Math.max(0, 2 - G.gamesPlayedToday);
+    const gamesLeftEl = document.getElementById('gamesLeft');
+    gamesLeftEl.textContent = `🎮 Игр осталось: ${left}`;
+    
+    if (left === 0) {
+        gamesLeftEl.style.color = '#ff3333';
+        gamesLeftEl.style.borderColor = 'rgba(255, 50, 50, 0.4)';
+    } else if (left === 1) {
+        gamesLeftEl.style.color = '#ffaa00';
+        gamesLeftEl.style.borderColor = 'rgba(255, 170, 0, 0.4)';
+    }
+}
+
+function saveGameStats(score, nickname) {
+    const stats = JSON.parse(localStorage.getItem('tr_game_stats') || '{"played": 0, "date": null, "games": []}');
+    const today = new Date().toDateString();
+    
+    if (stats.date !== today) {
+        stats.played = 0;
+        stats.date = today;
+        stats.games = [];
+    }
+    
+    stats.played++;
+    stats.games.push({
+        nickname: nickname,
+        score: score,
+        level: G.level,
+        coins: G.coins,
+        difficulty: G.difficulty,
+        time: new Date().toLocaleTimeString('ru-RU')
+    });
+    
+    localStorage.setItem('tr_game_stats', JSON.stringify(stats));
+    G.gamesPlayedToday = stats.played;
+    updateGamesCounter();
+}
+
+function checkGameLimit() {
+    loadGameStats();
+    if (G.gamesPlayedToday >= 2) {
+        const menuContent = document.querySelector('.menu-container');
+        menuContent.innerHTML = `
+            <div style="text-align: center;">
+                <div class="game-title" style="color: #ff3333; font-size: 40px; margin-bottom: 30px;">ЛИМИТ ИСЧЕРПАН</div>
+                <div style="background: rgba(0, 0, 0, 0.3); border: 2px solid rgba(255, 50, 50, 0.3); padding: 30px; border-radius: 15px; margin-bottom: 30px;">
+                    <div style="color: #7a9fb8; font-size: 13px; text-transform: uppercase; margin-bottom: 15px; letter-spacing: 1px;">⏰ ВАША КВОТА НА СЕГОДНЯ ИСЧЕРПАНА</div>
+                    <div style="color: #ffaa00; font-weight: 900; font-size: 18px; margin-bottom: 15px;">2 игры в день</div>
+                    <div style="color: #7a9fb8; font-size: 12px;">Следующие игры доступны завтра в 00:00</div>
+                </div>
+                <button class="action-btn" onclick="location.reload()">ЗАКРЫТЬ</button>
+            </div>
+        `;
+        return false;
+    }
+    return true;
+}
+
+function init3D() {
+    const canvas = document.getElementById('canvas3d');
+    
+    G.scene = new THREE.Scene();
+    G.scene.background = new THREE.Color(0x87ceeb);
+    G.scene.fog = new THREE.Fog(0x87ceeb, 50, 150);
+    
+    G.camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000);
+    G.camera.position.set(0, 8, 15);
+    G.camera.lookAt(0, 1, 0);
+    
+    G.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+    G.renderer.setSize(window.innerWidth, window.innerHeight);
+    G.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+    G.renderer.shadowMap.enabled = true;
+    G.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    
+    // Lighting
+    const ambient = new THREE.AmbientLight(0xffffff, 0.7);
+    G.scene.add(ambient);
+    
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    dirLight.position.set(15, 30, 15);
+    dirLight.castShadow = true;
+    dirLight.shadow.camera.left = -40;
+    dirLight.shadow.camera.right = 40;
+    dirLight.shadow.camera.top = 40;
+    dirLight.shadow.camera.bottom = -40;
+    dirLight.shadow.mapSize.width = 2048;
+    dirLight.shadow.mapSize.height = 2048;
+    G.scene.add(dirLight);
+    
+    createRoad();
+    createAmbulance();
+    
+    for (let i = 0; i < 30; i++) {
+        createBuilding(-40 - i * 20, Math.random() > 0.5 ? 1 : -1);
+    }
+    
+    window.addEventListener('resize', () => {
+        G.camera.aspect = window.innerWidth / window.innerHeight;
+        G.camera.updateProjectionMatrix();
+        G.renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+}
+
+function createRoad() {
+    const roadGeo = new THREE.PlaneGeometry(15, 400);
+    const roadMat = new THREE.MeshStandardMaterial({
+        color: 0x333333,
+        roughness: 0.8
+    });
+    const road = new THREE.Mesh(roadGeo, roadMat);
+    road.rotation.x = -Math.PI / 2;
+    road.position.z = -200;
+    road.receiveShadow = true;
+    G.scene.add(road);
+    
+    for (let i = 0; i < 100; i++) {
+        const markGeo = new THREE.PlaneGeometry(0.2, 4);
+        const markMat = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+        const mark = new THREE.Mesh(markGeo, markMat);
+        mark.rotation.x = -Math.PI / 2;
+        mark.position.set(0, 0.01, -i * 5);
+        G.scene.add(mark);
+        G.road.push(mark);
+    }
+}
+
+function createAmbulance() {
+    const ambulanceGroup = new THREE.Group();
+    
+    // Основной корпус (белый)
+    const bodyGeo = new THREE.BoxGeometry(1.6, 1.2, 3.5);
+    const whiteMat = new THREE.MeshStandardMaterial({
+        color: 0xffffff,
+        metalness: 0.6,
+        roughness: 0.3
+    });
+    const body = new THREE.Mesh(bodyGeo, whiteMat);
+    body.position.y = 0.6;
+    body.castShadow = true;
+    body.receiveShadow = true;
+    ambulanceGroup.add(body);
+    
+    // Кабина (красная полоса)
+    const cabinGeo = new THREE.BoxGeometry(1.5, 0.8, 1.5);
+    const redMat = new THREE.MeshStandardMaterial({
+        color: 0xee3333,
+        metalness: 0.5,
+        roughness: 0.4
+    });
+    const cabin = new THREE.Mesh(cabinGeo, redMat);
+    cabin.position.set(0, 1.4, -0.8);
+    cabin.castShadow = true;
+    ambulanceGroup.add(cabin);
+    
+    // Окна кабины
+    const windowMat = new THREE.MeshStandardMaterial({
+        color: 0x222244,
+        metalness: 0.8,
+        roughness: 0.2,
+        transparent: true,
+        opacity: 0.7
+    });
+    const windowGeo = new THREE.BoxGeometry(1.52, 0.6, 1.0);
+    const window = new THREE.Mesh(windowGeo, windowMat);
+    window.position.set(0, 1.4, -0.8);
+    ambulanceGroup.add(window);
+    
+    // КРАСНЫЙ КРЕСТ
+    const crossMat = new THREE.MeshStandardMaterial({
+        color: 0xff0000,
+        emissive: 0xff0000,
+        emissiveIntensity: 0.8
+    });
+    const crossH = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.2, 0.08), crossMat);
+    crossH.position.set(0, 1.2, 1.55);
+    ambulanceGroup.add(crossH);
+    const crossV = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.8, 0.08), crossMat);
+    crossV.position.set(0, 1.2, 1.55);
+    ambulanceGroup.add(crossV);
+    
+    // КРАСНАЯ ПОЛОСА на корпусе
+    const stripeGeo = new THREE.BoxGeometry(1.62, 0.15, 3.52);
+    const stripe = new THREE.Mesh(stripeGeo, redMat);
+    stripe.position.set(0, 1.0, 0);
+    ambulanceGroup.add(stripe);
+    
+    // Фары спереди (жёлтые)
+    const lightGeo = new THREE.BoxGeometry(0.25, 0.15, 0.1);
+    const lightMat = new THREE.MeshStandardMaterial({
+        color: 0xffff88,
+        emissive: 0xffff88,
+        emissiveIntensity: 1
+    });
+    
+    const lightL = new THREE.Mesh(lightGeo, lightMat);
+    lightL.position.set(-0.6, 0.6, 1.8);
+    ambulanceGroup.add(lightL);
+    
+    const lightR = new THREE.Mesh(lightGeo, lightMat);
+    lightR.position.set(0.6, 0.6, 1.8);
+    ambulanceGroup.add(lightR);
+    
+    // МИГАЛКИ (красная и синяя)
+    const sirenGeo = new THREE.BoxGeometry(0.3, 0.25, 0.25);
+    const redLightMat = new THREE.MeshStandardMaterial({
+        color: 0xff0000,
+        emissive: 0xff0000,
+        emissiveIntensity: 1
+    });
+    const blueLightMat = new THREE.MeshStandardMaterial({
+        color: 0x0088ff,
+        emissive: 0x0088ff,
+        emissiveIntensity: 1
+    });
+    
+    const sirenRed = new THREE.Mesh(sirenGeo, redLightMat);
+    sirenRed.position.set(-0.5, 1.95, -0.5);
+    ambulanceGroup.add(sirenRed);
+    ambulanceGroup.userData.sirenRed = sirenRed;
+    
+    const sirenBlue = new THREE.Mesh(sirenGeo, blueLightMat);
+    sirenBlue.position.set(0.5, 1.95, -0.5);
+    ambulanceGroup.add(sirenBlue);
+    ambulanceGroup.userData.sirenBlue = sirenBlue;
+    
+    // Колёса
+    const wheelGeo = new THREE.CylinderGeometry(0.35, 0.35, 0.25, 16);
+    const wheelMat = new THREE.MeshStandardMaterial({
+        color: 0x111111,
+        metalness: 0.3,
+        roughness: 0.7
+    });
+    
+    const wheelPositions = [
+        [-0.85, 0.35, 1.2],
+        [0.85, 0.35, 1.2],
+        [-0.85, 0.35, -1.2],
+        [0.85, 0.35, -1.2]
+    ];
+    
+    wheelPositions.forEach(pos => {
+        const wheel = new THREE.Mesh(wheelGeo, wheelMat);
+        wheel.rotation.z = Math.PI / 2;
+        wheel.position.set(...pos);
+        wheel.castShadow = true;
+        ambulanceGroup.add(wheel);
+    });
+    
+    ambulanceGroup.position.set(0, 0, 0);
+    G.scene.add(ambulanceGroup);
+    G.playerCar = ambulanceGroup;
+}
+
+function createTrafficCar(z, lane) {
+    const carGroup = new THREE.Group();
+    
+    const colors = [0xff0000, 0x0000ff, 0xffff00, 0x00ff00, 0xff00ff];
+    const color = colors[Math.floor(Math.random() * colors.length)];
+    
+    const bodyGeo = new THREE.BoxGeometry(1.4, 0.95, 3.2);
+    const bodyMat = new THREE.MeshStandardMaterial({
+        color: color,
+        metalness: 0.6,
+        roughness: 0.4
+    });
+    const body = new THREE.Mesh(bodyGeo, bodyMat);
+    body.position.y = 0.5;
+    body.castShadow = true;
+    carGroup.add(body);
+    
+    const cabinGeo = new THREE.BoxGeometry(1.2, 0.7, 1.0);
+    const cabin = new THREE.Mesh(cabinGeo, bodyMat);
+    cabin.position.set(0, 1.35, -0.4);
+    cabin.castShadow = true;
+    carGroup.add(cabin);
+    
+    const windowMat = new THREE.MeshStandardMaterial({
+        color: 0x111111,
+        metalness: 0.9,
+        transparent: true,
+        opacity: 0.6
+    });
+    const windowGeo = new THREE.BoxGeometry(1.22, 0.6, 0.9);
+    const window = new THREE.Mesh(windowGeo, windowMat);
+    window.position.set(0, 1.35, -0.4);
+    carGroup.add(window);
+    
+    const wheelGeo = new THREE.CylinderGeometry(0.3, 0.3, 0.2, 12);
+    const wheelMat = new THREE.MeshStandardMaterial({ color: 0x000000 });
+    
+    const wheelPositions = [
+        [-0.8, 0.3, 1.0],
+        [0.8, 0.3, 1.0],
+        [-0.8, 0.3, -1.0],
+        [0.8, 0.3, -1.0]
+    ];
+    
+    wheelPositions.forEach(pos => {
+        const wheel = new THREE.Mesh(wheelGeo, wheelMat);
+        wheel.rotation.z = Math.PI / 2;
+        wheel.position.set(...pos);
+        wheel.castShadow = true;
+        carGroup.add(wheel);
+    });
+    
+    carGroup.position.set(G.lanes[lane], 0, z);
+    carGroup.userData = {
+        speed: G.difficultySettings[G.difficulty].trafficSpeed + Math.random() * 0.3
+    };
+    
+    G.scene.add(carGroup);
+    G.traffic.push(carGroup);
+}
+
+function createBuilding(z, side) {
+    const height = 4 + Math.random() * 12;
+    const width = 3 + Math.random() * 3;
+    const depth = 4 + Math.random() * 4;
+    
+    const buildingGeo = new THREE.BoxGeometry(width, height, depth);
+    const buildingMat = new THREE.MeshStandardMaterial({
+        color: new THREE.Color().setHSL(Math.random(), 0.3, 0.4),
+        metalness: 0.3,
+        roughness: 0.7
+    });
+    const building = new THREE.Mesh(buildingGeo, buildingMat);
+    building.position.set(
+        side > 0 ? 10 + Math.random() * 5 : -10 - Math.random() * 5,
+        height / 2,
+        z
+    );
+    building.castShadow = true;
+    building.receiveShadow = true;
+    G.scene.add(building);
+    G.buildings.push(building);
+    
+    const windowCount = Math.floor(height / 1.5);
+    for (let i = 0; i < windowCount; i++) {
+        for (let j = 0; j < 2; j++) {
+            const windowGeo = new THREE.PlaneGeometry(0.4, 0.5);
+            const windowMat = new THREE.MeshBasicMaterial({
+                color: Math.random() > 0.4 ? 0xffff88 : 0x1a1a2e
+            });
+            const window = new THREE.Mesh(windowGeo, windowMat);
+            window.position.set(
+                j === 0 ? -width / 2 + 0.01 : width / 2 - 0.01,
+                i * 1.5 + 1,
+                0
+            );
+            window.rotation.y = j === 0 ? Math.PI / 2 : -Math.PI / 2;
+            building.add(window);
+        }
+    }
+}
+
+function startGame() {
+    if (!checkGameLimit()) return;
+    
+    G.gameActive = true;
+    G.score = 0;
+    G.coins = 0;
+    G.level = 1;
+    G.speed = 0;
+    G.currentLane = 1;
+    G.targetX = G.lanes[1];
+    G.maxSpeed = G.difficultySettings[G.difficulty].maxSpeed;
+    
+    if (G.playerCar) {
+        G.playerCar.position.set(0, 0, 0);
+    }
+    
+    G.traffic.forEach(car => G.scene.remove(car));
+    G.traffic = [];
+    
+    document.getElementById('overlay').classList.add('hidden');
+    gameLoop();
+}
+
+function gameOver() {
+    G.gameActive = false;
+    
+    const finalScore = Math.floor(G.score);
+    const menuContent = document.querySelector('.menu-container');
+    menuContent.innerHTML = `
+        <div class="game-over">
+            <div class="game-over-title">🚑 GAME OVER</div>
+            <div class="stats-box">
+                <div class="stat-row">
+                    <span class="stat-label">Distance:</span>
+                    <span class="stat-value">${finalScore} М</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Level:</span>
+                    <span class="stat-value">${G.level}</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Coins:</span>
+                    <span class="stat-value">💰 ${G.coins}</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Difficulty:</span>
+                    <span class="stat-value">${G.difficulty.toUpperCase()}</span>
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label class="input-label">📝 Ваше имя</label>
+                <input type="text" id="playerNick" class="input-field" placeholder="Nick_Name" maxlength="25">
+            </div>
+
+            <button id="sendBtn" class="action-btn" onclick="sendGameData('${finalScore}')">📤 ОТПРАВИТЬ ОТЧЕТ</button>
+            <div class="status-msg" id="statusMsg"></div>
+
+            <div class="button-group" style="margin-top: 20px;">
+                <button class="action-btn-small" onclick="location.reload()">↺ НОВАЯ ИГРА</button>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('overlay').classList.remove('hidden');
+    document.getElementById('playerNick').focus();
+}
+
+function sendGameData(finalScore) {
+    const nick = document.getElementById('playerNick').value.trim();
+    const btn = document.getElementById('sendBtn');
+    const status = document.getElementById('statusMsg');
+
+    if (!nick) {
+        status.innerText = "⚠️ Введите ваше имя!";
+        status.style.color = "#ff3333";
+        return;
+    }
+
+    if (nick.length < 2) {
+        status.innerText = "⚠️ Имя должно быть минимум 2 символа";
+        status.style.color = "#ff3333";
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerText = "📤 ОТПРАВКА...";
+    status.style.color = "#00d4ff";
+    status.innerText = "⏳ Сохранение результата...";
+
+    saveGameStats(finalScore, nick);
+
+    const data = {
+        timestamp: new Date().toLocaleString('ru-RU'),
+        nickname: nick,
+        score: finalScore,
+        level: G.level,
+        coins: G.coins,
+        difficulty: G.difficulty,
+        game: 'traffic_racer_3d'
+    };
+
+    fetch(GOOGLE_SHEET_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        body: JSON.stringify(data),
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(() => {
+        status.style.color = "#00ff88";
+        status.innerText = "✅ Отчет принят!";
+        btn.innerText = "✓ ГОТОВО";
+        
+        setTimeout(() => {
+            location.reload();
+        }, 1500);
+    })
+    .catch(error => {
+        console.error('Ошибка:', error);
+        status.style.color = "#00ff88";
+        status.innerText = "✅ Результат сохранен!";
+        
+        setTimeout(() => {
+            location.reload();
+        }, 1000);
+    });
+}
+
+function gameLoop() {
+    if (!G.gameActive) return;
+    
+    G.time += 0.016;
+    G.score += 0.1;
+    
+    G.speed = Math.min(G.maxSpeed, G.speed + 0.3);
+    const speedNorm = G.speed / G.maxSpeed;
+    
+    G.level = Math.floor(G.score / 100) + 1;
+    
+    if (G.moveLeft && G.currentLane > 0) {
+        G.currentLane--;
+        G.targetX = G.lanes[G.currentLane];
+        G.moveLeft = false;
+    }
+    if (G.moveRight && G.currentLane < 2) {
+        G.currentLane++;
+        G.targetX = G.lanes[G.currentLane];
+        G.moveRight = false;
+    }
+    
+    if (G.playerCar) {
+        G.playerCar.position.x += (G.targetX - G.playerCar.position.x) * 0.15;
+        
+        const tilt = (G.targetX - G.playerCar.position.x) * 0.15;
+        G.playerCar.rotation.z = -tilt * 0.3;
+        
+        // Мигание мигалок
+        const flash = Math.sin(G.time * 12) > 0;
+        if (G.playerCar.userData.sirenRed && G.gameActive) {
+            G.playerCar.userData.sirenRed.material.emissiveIntensity = flash ? 1.5 : 0.3;
+        }
+        if (G.playerCar.userData.sirenBlue && G.gameActive) {
+            G.playerCar.userData.sirenBlue.material.emissiveIntensity = flash ? 0.3 : 1.5;
+        }
+        
+        G.playerCar.children.forEach(child => {
+            if (child.geometry && child.geometry.type === 'CylinderGeometry') {
+                child.rotation.x += speedNorm * 0.4;
+            }
+        });
+    }
+    
+    G.road.forEach(mark => {
+        mark.position.z += speedNorm * 1;
+        if (mark.position.z > 20) mark.position.z -= 500;
+    });
+    
+    G.buildings.forEach(building => {
+        building.position.z += speedNorm * 1;
+        if (building.position.z > 50) {
+            building.position.z -= 1200;
+        }
+    });
+    
+    const spawnChance = G.difficultySettings[G.difficulty].trafficFreq;
+    if (Math.random() < spawnChance) {
+        const lane = Math.floor(Math.random() * 3);
+        createTrafficCar(-80, lane);
+    }
+    
+    G.traffic = G.traffic.filter(car => {
+        car.position.z += speedNorm * 1 + car.userData.speed;
+        
+        if (G.playerCar) {
+            const dx = car.position.x - G.playerCar.position.x;
+            const dz = car.position.z - G.playerCar.position.z;
+            
+            if (Math.abs(dx) < 1.5 && Math.abs(dz) < 2.5) {
+                gameOver();
+                return true;
+            }
+        }
+        
+        if (car.position.z > G.playerCar.position.z && !car.userData.passed) {
+            car.userData.passed = true;
+            G.coins += 10;
+        }
+        
+        if (car.position.z > 30) {
+            G.scene.remove(car);
+            return false;
+        }
+        return true;
+    });
+    
+    document.getElementById('distance').textContent = Math.floor(G.score);
+    document.getElementById('level').textContent = G.level;
+    document.getElementById('coins').textContent = G.coins;
+    document.getElementById('speed').textContent = Math.round(G.speed);
+    
+    if (G.playerCar) {
+        G.camera.position.x = G.playerCar.position.x * 0.4;
+        G.camera.position.z = G.playerCar.position.z + 15;
+    }
+    
+    G.renderer.render(G.scene, G.camera);
+    requestAnimationFrame(gameLoop);
+}
+
+// Controls
+document.getElementById('leftBtn').addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    G.moveLeft = true;
+});
+document.getElementById('leftBtn').addEventListener('mousedown', () => G.moveLeft = true);
+document.getElementById('leftBtn').addEventListener('touchend', () => G.moveLeft = false);
+document.getElementById('leftBtn').addEventListener('mouseup', () => G.moveLeft = false);
+
+document.getElementById('rightBtn').addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    G.moveRight = true;
+});
+document.getElementById('rightBtn').addEventListener('mousedown', () => G.moveRight = true);
+document.getElementById('rightBtn').addEventListener('touchend', () => G.moveRight = false);
+document.getElementById('rightBtn').addEventListener('mouseup', () => G.moveRight = false);
+
+document.querySelectorAll('.difficulty-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.difficulty-btn').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        G.difficulty = btn.dataset.difficulty;
+    });
+});
+
+document.getElementById('startBtn').addEventListener('click', startGame);
+
+window.addEventListener('load', () => {
+    init3D();
+    checkGameLimit();
+    updateGamesCounter();
+});
+    </script>
+</body>
+</html>
